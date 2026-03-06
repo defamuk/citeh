@@ -526,9 +526,12 @@ body {
 <div class="panel active" id="panel-map">
   <div id="map"></div>
   <div class="map-legend">
-    <span class="legend-pub">Venue</span>
+    <span class="legend-pub">Pub</span>
+    <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:#1a1a2e;display:inline-block;"></span> Breakfast</span>
     <span class="legend-pit">Pit Stop</span>
-    <span class="legend-done">Completed</span>
+    <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:#16a34a;display:inline-block;"></span> Food</span>
+    <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:50%;background:#7c3aed;display:inline-block;"></span> Destination</span>
+    <span class="legend-done">All Visited</span>
   </div>
   <div class="route-list" id="routeList"></div>
 </div>
@@ -545,7 +548,7 @@ body {
 
   <div class="section-title">Activities (3 max)</div>
   <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px;">
-    These apply to all pub/venue stops. Tesco has its own fixed activity.
+    These apply to all pub/venue stops (including breakfast &amp; destination). Tesco and Argus have their own fixed activities.
   </p>
   <div class="activity-inputs" id="activityInputs">
     <div class="activity-input-row">
@@ -591,15 +594,14 @@ body {
 <script>
 // ── Data Model ──
 const LOCATIONS = [
-  { id:'fitzharding', name:'The Robert Fitzharding', type:'pub', lat:51.44284, lng:-2.62045 },
-  { id:'londoninn',   name:'The London Inn Pub',     type:'pub', lat:51.44219, lng:-2.62732 },
-  { id:'blackcat',    name:'The Black Cat',           type:'pub', lat:51.44070, lng:-2.63090 },
-  { id:'jollycolliers', name:'Jolly Colliers',        type:'pub', lat:51.43940, lng:-2.63376 },
-  { id:'tesco',       name:'Tesco Express',           type:'pitstop', lat:51.43897, lng:-2.63659 },
-  { id:'argus',       name:'Argus Fish Bar',          type:'pub', lat:51.43848, lng:-2.63882 },
-  { id:'threelions',  name:'Three Lions',             type:'pub', lat:51.43740, lng:-2.64091 },
-  { id:'luckwell',    name:'The Luckwell',            type:'pub', lat:51.43600, lng:-2.64310 },
-  { id:'ashtongate',  name:'Ashton Gate',             type:'pub', lat:51.44000, lng:-2.62050 },
+  { id:'fitzharding', name:'The Robert Fitzharding', type:'breakfast', lat:51.441173, lng:-2.600969 },
+  { id:'londoninn',   name:'The London Inn Pub',     type:'pub', lat:51.440814, lng:-2.600858 },
+  { id:'blackcat',    name:'The Black Cat',           type:'pub', lat:51.439399, lng:-2.601969 },
+  { id:'jollycolliers', name:'Jolly Colliers',        type:'pub', lat:51.438545, lng:-2.602924 },
+  { id:'tesco',       name:'Tesco Express',           type:'pitstop', lat:51.438040, lng:-2.603639 },
+  { id:'argus',       name:'Argus Fish Bar',          type:'food', lat:51.437236, lng:-2.604777 },
+  { id:'threelions',  name:'Three Lions',             type:'pub', lat:51.435123, lng:-2.607767 },
+  { id:'ashtongate',  name:'Ashton Gate',             type:'destination', lat:51.439870, lng:-2.620590 },
 ];
 
 let state = {
@@ -630,7 +632,7 @@ function initMap() {
     document.getElementById('map').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-muted);font-size:0.9rem;text-align:center;padding:20px;">Map loads when deployed to GitHub Pages<br>(Leaflet CDN not available in preview)</div>';
     return;
   }
-  map = L.map('map').setView([51.4397, -2.6330], 15);
+  map = L.map('map').setView([51.4380, -2.6080], 15);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '© OpenStreetMap'
   }).addTo(map);
@@ -639,16 +641,18 @@ function initMap() {
   L.polyline(coords, { color: '#e94560', weight: 3, opacity: 0.5, dashArray: '8 6' }).addTo(map);
 }
 
-function makeIcon(color, label) {
+function makeIcon(color, label, emoji) {
+  const content = emoji || label;
+  const fontSize = emoji ? '1rem' : '0.75rem';
   return L.divIcon({
     className: '',
     html: `<div style="
       width:30px;height:30px;border-radius:50%;
       background:${color};color:#fff;
       display:flex;align-items:center;justify-content:center;
-      font-weight:700;font-size:0.75rem;font-family:'DM Sans',sans-serif;
+      font-weight:700;font-size:${fontSize};font-family:'DM Sans',sans-serif;
       border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.4);
-    ">${label}</div>`,
+    ">${content}</div>`,
     iconSize: [30,30],
     iconAnchor: [15,15]
   });
@@ -662,6 +666,16 @@ function getLocationVisitCount(locId) {
   return count;
 }
 
+function getLocTypeInfo(loc) {
+  switch(loc.type) {
+    case 'breakfast':  return { color: '#1a1a2e', emoji: '🍳', icon: '🍳 Breakfast', headerBg: 'linear-gradient(90deg, #1a1a2e, #2a2a4a)' };
+    case 'pitstop':    return { color: '#00539f', emoji: '🥤', icon: '🥤 Pit Stop', headerBg: 'linear-gradient(90deg, #00539f, #003d7a)' };
+    case 'food':       return { color: '#16a34a', emoji: '🐟', icon: '🐟 Food Stop', headerBg: 'linear-gradient(90deg, #16a34a, #15803d)' };
+    case 'destination':return { color: '#7c3aed', emoji: '⚽', icon: '⚽ Final Destination', headerBg: 'linear-gradient(90deg, #7c3aed, #6d28d9)' };
+    default:           return { color: '#e94560', emoji: null, icon: '🍺 Venue', headerBg: 'linear-gradient(90deg, #e94560, #c23152)' };
+  }
+}
+
 function updateMapMarkers() {
   if (!map) return;
   markers.forEach(m => map.removeLayer(m));
@@ -669,28 +683,30 @@ function updateMapMarkers() {
   LOCATIONS.forEach((loc, i) => {
     const visited = getLocationVisitCount(loc.id);
     const allVisited = state.people.length > 0 && visited === state.people.length;
-    let color = loc.type === 'pitstop' ? 'var(--tesco-blue)' : '#e94560';
-    if (loc.type === 'pitstop') color = '#00539f';
-    else color = '#e94560';
+    const info = getLocTypeInfo(loc);
+    let color = info.color;
     if (allVisited) color = '#4ade80';
-    const marker = L.marker([loc.lat, loc.lng], { icon: makeIcon(color, i+1) })
+    const marker = L.marker([loc.lat, loc.lng], { icon: makeIcon(color, i+1, info.emoji) })
       .addTo(map)
-      .bindPopup(`<b>${loc.name}</b><br>${visited}/${state.people.length} visited`);
+      .bindPopup(`<b>${loc.name}</b><br>${info.icon}<br>${visited}/${state.people.length} visited`);
     markers.push(marker);
   });
 }
 
 function renderRouteList() {
   const el = document.getElementById('routeList');
-  el.innerHTML = LOCATIONS.map((loc, i) => `
-    <div class="route-item ${loc.type === 'pitstop' ? 'tesco' : ''}">
-      <div class="route-num">${i+1}</div>
+  el.innerHTML = LOCATIONS.map((loc, i) => {
+    const info = getLocTypeInfo(loc);
+    const isSpecial = ['pitstop','breakfast','food','destination'].includes(loc.type);
+    return `
+    <div class="route-item ${isSpecial ? 'tesco' : ''}" style="${isSpecial ? 'border-left-color:' + info.color : ''}">
+      <div class="route-num" style="${isSpecial ? 'background:' + info.color : ''}">${i+1}</div>
       <div>
         <div class="route-name">${loc.name}</div>
-        <div class="route-type">${loc.type === 'pitstop' ? '🛒 Pit Stop' : '🍺 Venue'}</div>
+        <div class="route-type">${info.icon}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 
 // ── Setup ──
@@ -740,6 +756,11 @@ function saveSetup() {
 // ── Tracker ──
 function getActivitiesForLocation(loc) {
   if (loc.type === 'pitstop') return [{ key: 'act_water', label: 'Drink Water' }];
+  if (loc.type === 'food') return [{ key: 'act_food', label: 'Eat Food' }];
+  if (loc.type === 'destination') return state.activities
+    .map((a, i) => ({ key: `act${i}`, label: a || `Activity ${i+1}` }))
+    .filter(a => a.label);
+  // pub and breakfast get the standard 3 activities
   return state.activities
     .map((a, i) => ({ key: `act${i}`, label: a || `Activity ${i+1}` }))
     .filter(a => a.label);
@@ -782,9 +803,10 @@ function renderTracker() {
     const cols = 1 + acts.length; // visited + activities
     const totalCols = cols + 1; // name col + visited + activities
     const visitCount = getLocationVisitCount(loc.id);
+    const info = getLocTypeInfo(loc);
 
-    html += `<div class="location-block ${loc.type === 'pitstop' ? 'tesco' : ''}">`;
-    html += `<div class="location-header">
+    html += `<div class="location-block">`;
+    html += `<div class="location-header" style="background:${info.headerBg}">
       <span>${li+1}. ${loc.name}</span>
       <span class="location-count">${visitCount}/${state.people.length} visited</span>
     </div>`;
